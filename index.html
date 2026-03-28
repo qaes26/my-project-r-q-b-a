@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مشروع التنقل الذكي - جامعة إربد الأهلية</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'sans-serif'] },
+                    colors: {
+                        darkBg: '#080c16',
+                        cardBg: '#121a2f',
+                        cyanGlow: '#00e5ff',
+                        inuBlue: '#0f2b5b'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #080c16;
+            color: #e2e8f0;
+            overflow: hidden;
+        }
+
+        /* Tech Background Grid */
+        .bg-grid {
+            background-image: 
+                linear-gradient(rgba(0, 229, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 229, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        /* Slide Transitions */
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.6s ease-in-out;
+            transform: scale(0.95);
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            transform: scale(1);
+            z-index: 10;
+        }
+
+        /* Presenter Box Style */
+        .presenter-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(15, 43, 91, 0.6);
+            border: 1px solid #00e5ff;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.2);
+            padding: 10px 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            font-weight: bold;
+            color: #00e5ff;
+            font-size: 1.2rem;
+        }
+
+        /* Navigation Buttons */
+        .nav-btn {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 229, 255, 0.1);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            color: #00e5ff;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 50;
+            transition: all 0.3s;
+            backdrop-filter: blur(5px);
+        }
+
+        .nav-btn:hover {
+            background: rgba(0, 229, 255, 0.3);
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.5);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .nav-btn.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        #nextBtn { left: 30px; }
+        #prevBtn { right: 30px; }
+
+        /* Slide Content Container */
+        .content-container {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 0 80px;
+        }
+
+        .text-glow { text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); }
+
+        /* =========================================
+           EPIC INTRO ANIMATION STYLES
+           ========================================= */
+        #intro-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            background: #020810;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Cinematic letterbox bars */
+        .letterbox-top, .letterbox-bottom {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: #000;
+            z-index: 20;
+        }
+        .letterbox-top { top: 0; }
+        .letterbox-bottom { bottom: 0; }
+
+        /* Star particles in background */
+        .intro-stars {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: #fff;
+            border-radius: 50%;
+            opacity: 0;
+        }
+
+        /* Road / Ground */
+        .intro-road {
+            position: absolute;
+            bottom: 60px;
+            left: 0;
+            width: 100%;
+            height: 180px;
+            z-index: 3;
+            overflow: hidden;
+        }
+
+        .road-surface {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);
+        }
+
+        .road-line {
+            position: absolute;
+            bottom: 45px;
+            height: 4px;
+            width: 60px;
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 2px;
+        }
+
+        /* Glow trail behind the bus */
+        .glow-trail {
+            position: absolute;
+            bottom: 108px;
+            height: 8px;
+            left: 0;
+            width: 0;
+            z-index: 5;
+            background: linear-gradient(90deg, transparent 0%, rgba(0, 229, 255, 0.0) 10%, rgba(0, 229, 255, 0.6) 60%, rgba(0, 229, 255, 1) 100%);
+            filter: blur(4px);
+            border-radius: 4px;
+        }
+
+        .glow-trail-core {
+            position: absolute;
+            bottom: 110px;
+            height: 4px;
+            left: 0;
+            width: 0;
+            z-index: 6;
+            background: linear-gradient(90deg, transparent 0%, rgba(0, 229, 255, 0.0) 10%, #fff 90%, #fff 100%);
+            filter: blur(1px);
+            border-radius: 2px;
+        }
+
+        /* Glow reflection on road */
+        .road-glow {
+            position: absolute;
+            bottom: 60px;
+            left: 0;
+            width: 0;
+            height: 50px;
+            z-index: 4;
+            background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.08) 50%, rgba(0, 229, 255, 0.15));
+            filter: blur(10px);
+        }
+
+        /* The Bus */
+        .intro-bus {
+            position: absolute;
+            bottom: 88px;
+            z-index: 10;
+            transform: translateX(-400px);
+            filter: drop-shadow(0 5px 30px rgba(0, 229, 255, 0.4));
+        }
+
+        /* CSS 3D Bus Art */
+        .bus-body {
+            position: relative;
+            width: 280px;
+            height: 110px;
+        }
+
+        .bus-main {
+            position: absolute;
+            bottom: 0;
+            width: 280px;
+            height: 90px;
+            background: linear-gradient(180deg, #1e3a6e 0%, #0f2b5b 40%, #0a1e40 100%);
+            border-radius: 12px 12px 6px 6px;
+            border: 1px solid rgba(0, 229, 255, 0.25);
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.1),
+                0 4px 20px rgba(0,0,0,0.5),
+                0 0 40px rgba(0, 229, 255, 0.15);
+            overflow: hidden;
+        }
+
+        /* Windshield */
+        .bus-windshield {
+            position: absolute;
+            left: 5px;
+            top: 8px;
+            width: 50px;
+            height: 48px;
+            background: linear-gradient(135deg, rgba(0, 229, 255, 0.3) 0%, rgba(0, 229, 255, 0.08) 100%);
+            border-radius: 8px 4px 4px 8px;
+            border: 1px solid rgba(0, 229, 255, 0.35);
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.2);
+        }
+
+        /* Windows */
+        .bus-windows {
+            position: absolute;
+            top: 10px;
+            left: 65px;
+            display: flex;
+            gap: 6px;
+        }
+
+        .bus-window {
+            width: 28px;
+            height: 32px;
+            background: linear-gradient(180deg, rgba(0, 229, 255, 0.2), rgba(0, 229, 255, 0.05));
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        /* LED accent strip */
+        .bus-led-strip {
+            position: absolute;
+            bottom: 16px;
+            left: 10px;
+            right: 10px;
+            height: 3px;
+            background: linear-gradient(90deg, #00e5ff, #00e676, #00e5ff);
+            border-radius: 2px;
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.6);
+            animation: ledPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes ledPulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; box-shadow: 0 0 20px rgba(0, 229, 255, 0.9); }
+        }
+
+        /* Headlight */
+        .bus-headlight {
+            position: absolute;
+            left: -2px;
+            bottom: 22px;
+            width: 8px;
+            height: 14px;
+            background: #fff;
+            border-radius: 4px 2px 2px 4px;
+            box-shadow: 0 0 20px #fff, 0 0 60px rgba(255, 255, 200, 0.6);
+        }
+
+        /* Headlight beam */
+        .headlight-beam {
+            position: absolute;
+            left: -120px;
+            bottom: 14px;
+            width: 120px;
+            height: 40px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 200, 0.04));
+            clip-path: polygon(100% 20%, 0% 0%, 0% 100%, 100% 80%);
+        }
+
+        /* Wheels */
+        .bus-wheel {
+            position: absolute;
+            bottom: -12px;
+            width: 30px;
+            height: 30px;
+            background: radial-gradient(circle, #333 40%, #111 60%, #222 80%);
+            border-radius: 50%;
+            border: 3px solid #444;
+            z-index: 2;
+        }
+
+        .bus-wheel::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: #666;
+            border-radius: 50%;
+        }
+
+        .bus-wheel.front { left: 30px; }
+        .bus-wheel.rear { right: 30px; }
+
+        /* Roof antenna */
+        .bus-antenna {
+            position: absolute;
+            top: -20px;
+            right: 60px;
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(180deg, #00e5ff, #1e3a6e);
+            border-radius: 2px;
+        }
+
+        .bus-antenna::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 8px;
+            background: #00e5ff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00e5ff;
+            animation: antennaBlink 1s infinite;
+        }
+
+        @keyframes antennaBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* GPS signal waves from antenna */
+        .gps-wave {
+            position: absolute;
+            top: -35px;
+            right: 52px;
+            width: 24px;
+            height: 24px;
+            border: 2px solid rgba(0, 229, 255, 0.4);
+            border-radius: 50%;
+            opacity: 0;
+            animation: waveOut 2s ease-out infinite;
+        }
+
+        .gps-wave:nth-child(2) { animation-delay: 0.6s; }
+        .gps-wave:nth-child(3) { animation-delay: 1.2s; }
+
+        @keyframes waveOut {
+            0% { transform: scale(0.5); opacity: 0.6; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+
+        /* Bus Label */
+        .bus-label {
+            position: absolute;
+            top: 52px;
+            left: 70px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            color: rgba(0, 229, 255, 0.7);
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        /* Tail lights */
+        .bus-taillight {
+            position: absolute;
+            right: -2px;
+            width: 6px;
+            height: 10px;
+            background: #ff3333;
+            border-radius: 2px 4px 4px 2px;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.6);
+        }
+
+        .bus-taillight.top { bottom: 35px; }
+        .bus-taillight.bottom { bottom: 20px; }
+
+        /* Speed lines */
+        .speed-line {
+            position: absolute;
+            right: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.5));
+            border-radius: 1px;
+            opacity: 0;
+        }
+
+        /* Spark particles behind bus */
+        .spark {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: #00e5ff;
+            border-radius: 50%;
+            right: 100%;
+            box-shadow: 0 0 6px #00e5ff;
+            opacity: 0;
+        }
+
+        /* =========================================
+           INTRO NAMES
+           ========================================= */
+        .intro-names-container {
+            position: absolute;
+            width: 100%;
+            z-index: 15;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .intro-project-title {
+            font-family: 'Cairo', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 300;
+            color: rgba(0, 229, 255, 0.5);
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            opacity: 0;
+        }
+
+        .intro-main-title {
+            font-family: 'Cairo', sans-serif;
+            font-size: 3rem;
+            font-weight: 800;
+            color: #fff;
+            text-align: center;
+            margin-bottom: 40px;
+            opacity: 0;
+            text-shadow: 0 0 30px rgba(0, 229, 255, 0.4);
+        }
+
+        .intro-main-title span {
+            color: #00e5ff;
+            text-shadow: 0 0 20px rgba(0, 229, 255, 0.8);
+        }
+
+        .intro-name {
+            font-family: 'Cairo', sans-serif;
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: #fff;
+            opacity: 0;
+            transform: translateY(30px) scale(0.8);
+            text-shadow: 0 0 20px rgba(0, 229, 255, 0.5);
+            position: relative;
+            padding: 8px 40px;
+        }
+
+        .intro-name .name-glow {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.08), transparent);
+            border-radius: 8px;
+            opacity: 0;
+        }
+
+        .intro-name .name-line {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00e5ff, transparent);
+        }
+
+        .intro-divider {
+            width: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.4), transparent);
+            margin: 5px 0;
+            opacity: 0;
+        }
+
+        /* University badge */
+        .intro-university {
+            font-family: 'Cairo', sans-serif;
+            font-size: 1rem;
+            color: rgba(0, 229, 255, 0.4);
+            margin-top: 30px;
+            opacity: 0;
+            letter-spacing: 2px;
+        }
+
+        /* Subtle ambient glow */
+        .ambient-glow {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 229, 255, 0.06) 0%, transparent 70%);
+            z-index: 2;
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-grid">
+
+    <!-- =============================================
+         EPIC INTRO OVERLAY
+         ============================================= -->
+    <div id="intro-overlay">
+        <!-- Cinematic letterbox -->
+        <div class="letterbox-top"></div>
+        <div class="letterbox-bottom"></div>
+
+        <!-- Stars -->
+        <div class="intro-stars" id="intro-stars"></div>
+
+        <!-- Ambient glows -->
+        <div class="ambient-glow" style="top: 20%; left: 30%;"></div>
+        <div class="ambient-glow" style="top: 40%; right: 20%;"></div>
+
+        <!-- Road -->
+        <div class="intro-road">
+            <div class="road-surface"></div>
+        </div>
+
+        <!-- Glow Trail -->
+        <div class="glow-trail" id="glow-trail"></div>
+        <div class="glow-trail-core" id="glow-trail-core"></div>
+        <div class="road-glow" id="road-glow"></div>
+
+        <!-- The Bus -->
+        <div class="intro-bus" id="intro-bus">
+            <div class="bus-body">
+                <!-- GPS Waves -->
+                <div class="gps-wave"></div>
+                <div class="gps-wave"></div>
+                <div class="gps-wave"></div>
+
+                <!-- Antenna -->
+                <div class="bus-antenna"></div>
+
+                <!-- Main Body -->
+                <div class="bus-main">
+                    <div class="bus-windshield"></div>
+                    <div class="bus-windows">
+                        <div class="bus-window"></div>
+                        <div class="bus-window"></div>
+                        <div class="bus-window"></div>
+                        <div class="bus-window"></div>
+                        <div class="bus-window"></div>
+                    </div>
+                    <div class="bus-led-strip"></div>
+                    <div class="bus-headlight"></div>
+                    <div class="headlight-beam"></div>
+                    <div class="bus-label">INU SMART BUS</div>
+                    <div class="bus-taillight top"></div>
+                    <div class="bus-taillight bottom"></div>
+                </div>
+
+                <!-- Wheels -->
+                <div class="bus-wheel front"></div>
+                <div class="bus-wheel rear"></div>
+
+                <!-- Speed Lines -->
+                <div class="speed-line" style="top: 20px; width: 50px;"></div>
+                <div class="speed-line" style="top: 40px; width: 70px;"></div>
+                <div class="speed-line" style="top: 55px; width: 40px;"></div>
+                <div class="speed-line" style="top: 70px; width: 60px;"></div>
+
+                <!-- Sparks -->
+                <div class="spark" style="top: 30px;"></div>
+                <div class="spark" style="top: 50px;"></div>
+                <div class="spark" style="top: 65px;"></div>
+                <div class="spark" style="top: 45px;"></div>
+                <div class="spark" style="top: 75px;"></div>
+            </div>
+        </div>
+
+        <!-- Names Container -->
+        <div class="intro-names-container" id="intro-names">
+            <div class="intro-project-title" id="intro-proj-title">Smart Transportation System</div>
+            <div class="intro-main-title" id="intro-main-title">
+                نظام النقل الذكي<br>
+                <span>جامعة إربد الأهلية</span>
+            </div>
+
+            <div class="intro-name" id="name-0">
+                <div class="name-glow"></div>
+                قيس الجازي
+                <div class="name-line"></div>
+            </div>
+            <div class="intro-divider"></div>
+            <div class="intro-name" id="name-1">
+                <div class="name-glow"></div>
+                بدر بني حسن
+                <div class="name-line"></div>
+            </div>
+            <div class="intro-divider"></div>
+            <div class="intro-name" id="name-2">
+                <div class="name-glow"></div>
+                رهف مصطفى
+                <div class="name-line"></div>
+            </div>
+            <div class="intro-divider"></div>
+            <div class="intro-name" id="name-3">
+                <div class="name-glow"></div>
+                عهد خليف
+                <div class="name-line"></div>
+            </div>
+
+            <div class="intro-university" id="intro-uni">جامعة إربد الأهلية — 2026</div>
+        </div>
+    </div>
+
+    <!-- =============================================
+         MAIN PRESENTATION (Unchanged)
+         ============================================= -->
+
+
+    <!-- Navigation Arrows -->
+    <button id="prevBtn" class="nav-btn disabled" onclick="changeSlide(-1)"><i class="fa-solid fa-chevron-right"></i></button>
+    <button id="nextBtn" class="nav-btn" onclick="changeSlide(1)"><i class="fa-solid fa-chevron-left"></i></button>
+
+    <!-- Slide 1: Introduction (Qais) -->
+    <div class="slide active" id="slide-0">
+        <div class="content-container text-center">
+            <div class="flex justify-center">
+                <div class="presenter-box">
+                    <i class="fa-solid fa-microphone-lines"></i> تقديم: قيس الجازي
+                </div>
+            </div>
+            <h1 class="text-6xl font-bold mb-6">مستقبل التنقل في <span class="text-cyanGlow text-glow">جامعة إربد الأهلية</span></h1>
+            <h2 class="text-3xl text-gray-300 mb-8">لماذا هذا المشروع؟ وما هي رؤيتنا لعام 2026؟</h2>
+            <div class="bg-cardBg border border-gray-800 p-8 rounded-2xl text-right text-xl leading-relaxed text-gray-300 shadow-2xl">
+                <p class="mb-4">نحن اليوم في عام <strong class="text-cyanGlow">2026</strong>، حيث أصبحت التكنولوجيا والبيئة الرقمية جزءاً لا يتجزأ من حياتنا اليومية. نستخدم الذكاء الاصطناعي، وندير حساباتنا البنكية من هواتفنا، ونتسوق ونتعلم ونتواصل رقمياً. من غير المنطقي أبداً أن تتطور كل أدواتنا ووسائلنا بينما تبقى وسائل النقل والتنقل داخل وحول الجامعة تعتمد على العشوائية وعلى طرق تقليدية عفا عليها الزمن.</p>
+                <p class="mb-4">هذا المشروع ينطلق من <strong class="text-white">حاجة حقيقية يعيشها الطلاب يومياً</strong>: الانتظار الطويل بلا معلومات، التأخر عن المحاضرات، والتوتر النفسي المستمر بسبب غياب أي نظام ذكي يساعدهم على التخطيط لتنقلاتهم. مشكلة بسيطة ظاهرياً، لكن تأثيرها عميق على المستوى الأكاديمي والنفسي والاجتماعي.</p>
+                <p>لذلك، اجتمع فريقنا — <strong class="text-white">قيس، بدر، رهف، عهد</strong> — لتقديم حل جذري ورقمي شامل لمشكلة المواصلات الجامعية. سنشرح اليوم خطوة بخطوة كيف نحلل المشكلة من جذورها، لماذا التحول الرقمي ضرورة، وكيف سننقل جامعتنا إلى المستقبل بتطبيق ذكي واحد يحل كل هذه المعاناة.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 2: The Problem (Bader) -->
+    <div class="slide" id="slide-1">
+        <div class="content-container">
+            <div class="presenter-box">
+                <i class="fa-solid fa-user-tie"></i> تقديم: بدر بني حسن
+            </div>
+            <h1 class="text-5xl font-bold mb-8">واقع التنقل: <span class="text-red-400">معاناة يومية حقيقية</span></h1>
+            
+            <div class="grid grid-cols-2 gap-8">
+                <div class="bg-cardBg border border-gray-800 p-8 rounded-2xl">
+                    <h3 class="text-2xl font-bold text-cyanGlow mb-4"><i class="fa-solid fa-clock"></i> مواعيد جامدة وغير مرنة</h3>
+                    <p class="text-lg text-gray-300 leading-relaxed mb-4">
+                        حركة الباصات الجامعية حالياً مقيدة بمواعيد ثابتة لا تتغير: <br>
+                        <span class="inline-block bg-gray-800 text-white px-3 py-1 rounded mt-2 font-mono">12:30 PM</span> 
+                        <span class="inline-block bg-gray-800 text-white px-3 py-1 rounded mt-2 font-mono">1:00 PM</span> 
+                        <span class="inline-block bg-gray-800 text-white px-3 py-1 rounded mt-2 font-mono">4:00 PM</span>
+                    </p>
+                    <p class="text-lg text-gray-300 leading-relaxed mb-3">
+                        هذه المواعيد <strong class="text-white">لا تراعي اختلاف جداول الطلاب</strong>، ولا تأخذ بعين الاعتبار أن بعض المحاضرات تنتهي في أوقات مختلفة. الطالب الذي تنتهي محاضرته الساعة 12:45 مثلاً يجد نفسه قد فاته باص الـ 12:30 بدقائق، وعليه الانتظار حتى الساعة 1:00.
+                    </p>
+                    <p class="text-lg text-gray-300 leading-relaxed">
+                        المشكلة الأكبر هي أنه <strong class="text-red-400">لا يوجد أي وسيلة أو أداة</strong> تُمكّن الطالب من معرفة أين يتواجد الباص حالياً: هل غادر المحطة؟ هل هو في الطريق؟ هل سيتأخر؟ لا أحد يعرف.
+                    </p>
+                </div>
+                <div class="bg-cardBg border border-gray-800 p-8 rounded-2xl">
+                    <h3 class="text-2xl font-bold text-red-400 mb-4"><i class="fa-solid fa-graduation-cap"></i> التأثير المباشر على حياة الطالب</h3>
+                    <p class="text-lg text-gray-300 leading-relaxed mb-3">
+                        بالنسبة لطالب يسكن بعيداً عن الجامعة — وهم الأغلبية الساحقة — عدم معرفة موقع الباص يعني <strong class="text-white">احتمالية كبيرة جداً لتفويته</strong>. وهذا يترتب عليه:
+                    </p>
+                    <ul class="text-lg text-gray-300 space-y-2">
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-xmark text-red-400 mt-1.5"></i>
+                            <span><strong class="text-white">التأخر المتكرر عن المحاضرات</strong> مما يؤثر على الحضور والتقييم</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-xmark text-red-400 mt-1.5"></i>
+                            <span><strong class="text-white">الانتظار لساعات طويلة</strong> بدون أي معلومة عن الباص القادم</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-xmark text-red-400 mt-1.5"></i>
+                            <span><strong class="text-white">ضغط نفسي وتوتر يومي</strong> ينعكس على التركيز والصحة النفسية</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-xmark text-red-400 mt-1.5"></i>
+                            <span><strong class="text-white">هدر وقت ثمين</strong> كان يمكن استثماره في الدراسة أو الأنشطة</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 3: Digital Transformation (Rahaf) -->
+    <div class="slide" id="slide-2">
+        <div class="content-container">
+            <div class="presenter-box">
+                <i class="fa-solid fa-laptop-code"></i> تقديم: رهف مصطفى
+            </div>
+            <h1 class="text-5xl font-bold mb-8">التحول الرقمي: <span class="text-purple-400">ضرورة حتمية وليس خياراً</span></h1>
+            
+            <div class="bg-cardBg border border-purple-900/50 p-8 rounded-2xl text-lg leading-relaxed text-gray-300 mb-6">
+                <p class="mb-4">في عام 2026، لم يعد التحول الرقمي رفاهية أو خياراً إضافياً — بل أصبح <strong class="text-purple-300">ضرورة مُلحّة</strong> لأي مؤسسة تريد مواكبة العصر. الأنظمة الورقية والتقليدية في إدارة النقل الجامعي أصبحت تعيق التقدم وتُضعف الكفاءة التشغيلية. التحول الرقمي سيوفر الوقت، يقلل الهدر في الموارد، يحسّن تجربة الطالب بشكل جذري، ويمنح الجامعة صورة مؤسسية حديثة ومتطورة تليق بسمعتها.</p>
+                <p class="mb-6">
+                    عالمياً، الجامعات الكبرى مثل MIT وStanford وجامعات أوروبية عديدة تبنّت أنظمة نقل ذكية منذ سنوات. السؤال ليس "هل نحتاج للتحول الرقمي؟" بل <strong class="text-white">"لماذا لم نبدأ بعد؟"</strong>
+                </p>
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="border-r-4 border-red-500 pr-4">
+                        <h4 class="font-bold text-red-400 text-xl mb-3"><i class="fa-solid fa-triangle-exclamation mr-2"></i>العقبات المحتملة</h4>
+                        <ul class="space-y-2">
+                            <li class="flex items-start gap-2">
+                                <i class="fa-solid fa-circle text-red-400 text-[6px] mt-2.5"></i>
+                                <span><strong class="text-white">التكلفة المادية:</strong> تحديث البنية التحتية وتجهيز الحافلات بأجهزة GPS تحتاج ميزانية مخصصة</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <i class="fa-solid fa-circle text-red-400 text-[6px] mt-2.5"></i>
+                                <span><strong class="text-white">مقاومة التغيير:</strong> بعض الإداريين والسائقين قد يرفضون تبني أنظمة جديدة بسبب عدم الألفة</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <i class="fa-solid fa-circle text-red-400 text-[6px] mt-2.5"></i>
+                                <span><strong class="text-white">البنية التقنية:</strong> الحاجة لشبكة إنترنت مستقرة وسيرفرات موثوقة</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="border-r-4 border-green-500 pr-4">
+                        <h4 class="font-bold text-green-400 text-xl mb-3"><i class="fa-solid fa-lightbulb mr-2"></i>الحلول الاستراتيجية</h4>
+                        <ul class="space-y-2">
+                            <li class="flex items-start gap-2">
+                                <i class="fa-solid fa-circle text-green-400 text-[6px] mt-2.5"></i>
+                                <span><strong class="text-white">حلول منخفضة التكلفة:</strong> استخدام هواتف السائقين كأجهزة GPS بدلاً من أجهزة مكلفة</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <i class="fa-solid fa-circle text-green-400 text-[6px] mt-2.5"></i>
+                                <span><strong class="text-white">تطبيق بسيط وسهل:</strong> واجهة بديهية لا تحتاج تدريب — فقط افتح وشاهد</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <i class="fa-solid fa-circle text-green-400 text-[6px] mt-2.5"></i>
+                                <span><strong class="text-white">تطبيق تدريجي:</strong> البدء بخط واحد كتجربة أولية ثم التوسع بناءً على النتائج</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 4: Data Analysis (Ahed) -->
+    <div class="slide" id="slide-3">
+        <div class="content-container">
+            <div class="presenter-box">
+                <i class="fa-solid fa-chart-pie"></i> تقديم: عهد خليف
+            </div>
+            <h1 class="text-5xl font-bold mb-8">تحليل المشكلة: <span class="text-yellow-400">لغة الأرقام</span></h1>
+            
+            <div class="flex items-center gap-12 bg-cardBg border border-gray-800 p-10 rounded-2xl">
+                <div class="shrink-0 text-center relative">
+                    <div class="w-48 h-48 rounded-full border-8 border-gray-700 flex items-center justify-center relative">
+                        <svg class="absolute inset-0 w-full h-full transform -rotate-90">
+                            <circle cx="50%" cy="50%" r="46%" fill="none" stroke="#00e5ff" stroke-width="8%" stroke-dasharray="290%" stroke-dashoffset="15%"></circle>
+                        </svg>
+                        <span class="text-6xl font-black text-cyanGlow">95%</span>
+                    </div>
+                </div>
+                
+                <div class="text-lg text-gray-300 leading-relaxed">
+                    <p class="mb-4">من خلال دراسة معمّقة وتحليل شامل لجذور مشكلة التنقل الجامعي والحاجة الحقيقية لهذا المشروع، توصلنا إلى نتيجة صادمة: نسبة ضخمة تصل إلى <strong class="text-cyanGlow text-2xl">95% من الطلاب يعانون بشكل يومي</strong> من مشكلة المواصلات، وتسبب لهم توتراً نفسياً كبيراً يؤثر مباشرة على حياتهم الأكاديمية والشخصية.</p>
+                    
+                    <p class="mb-4"><strong class="text-yellow-400">ماذا عن الـ 5% المتبقية؟</strong> هذه الشريحة الصغيرة لا تواجه مشكلة لأسباب محددة: إما أن منازلهم قريبة جداً من الحرم الجامعي، أو يمتلكون سيارات خاصة، أو لديهم جداول تتوافق مع مواعيد الباصات — وهذه حالات استثنائية نادرة.</p>
+                    
+                    <p class="mb-3"><strong class="text-white">الخوف الأكبر عند الطلاب:</strong></p>
+                    <ul class="space-y-1 text-base">
+                        <li>😰 القلق اليومي من تفويت الباص بدقائق قليلة بسبب غياب المعلومات</li>
+                        <li>😰 عدم القدرة على التخطيط لأن لا أحد يعرف أين الباص الآن</li>
+                        <li>😰 الضغط النفسي المتراكم الذي يضعف التركيز والأداء الأكاديمي</li>
+                    </ul>
+
+                    <p class="text-cyanGlow font-bold mt-4">هذه النسبة الساحقة (95%) هي الدليل القاطع على أن هذا المشروع ليس ترفاً — بل هو حاجة ماسّة وعاجلة تستوجب حلاً فورياً.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 5: The Solution (Qais) -->
+    <div class="slide" id="slide-4">
+        <div class="content-container text-center">
+            <div class="flex justify-center">
+                <div class="presenter-box">
+                    <i class="fa-solid fa-mobile-screen"></i> تقديم: قيس الجازي (الحل)
+                </div>
+            </div>
+            <h1 class="text-6xl font-bold mb-8">تطبيق <span class="text-cyanGlow text-glow">INU Smart Bus</span></h1>
+            
+            <div class="bg-cardBg border border-cyanGlow/30 p-8 rounded-2xl text-xl leading-relaxed text-gray-300 text-right max-w-4xl mx-auto shadow-[0_0_30px_rgba(0,229,255,0.1)]">
+                <p class="mb-6">بناءً على كل ما تم عرضه من تحليل للمشكلة ودراسة الحاجة الماسّة والعقبات والحلول، تم تصميم <strong class="text-cyanGlow">تطبيق ذكي متكامل</strong> يحل هذه المشكلة من جذورها ويُنهي المعاناة اليومية لآلاف الطلاب. التطبيق مصمم ليكون بسيطاً وعملياً — يفتحه الطالب في ثوانٍ ويحصل على كل المعلومات فوراً.</p>
+                <ul class="space-y-5">
+                    <li class="flex items-start gap-4">
+                        <i class="fa-solid fa-location-crosshairs text-2xl text-cyanGlow mt-1"></i>
+                        <div>
+                            <strong class="text-white text-xl">التتبع المباشر عبر GPS:</strong><br>
+                            الميزة الجوهرية في التطبيق. يستطيع الطالب رؤية موقع باصه الحالي بالضبط على الخريطة لحظة بلحظة. يعرف متى سيصل الباص لمحطته بدقة، فيستطيع تنظيم وقته — لا حاجة للانتظار العشوائي بعد اليوم.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-4">
+                        <i class="fa-solid fa-bell text-2xl text-yellow-400 mt-1"></i>
+                        <div>
+                            <strong class="text-white text-xl">إشعارات ذكية مسبقة:</strong><br>
+                            يمكن للطالب تفعيل التنبيهات ليصله إشعار قبل وصول الباص بـ 5 دقائق. هكذا يغادر في الوقت المثالي بدون عجلة وبدون تأخير.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-4">
+                        <i class="fa-solid fa-users text-2xl text-green-400 mt-1"></i>
+                        <div>
+                            <strong class="text-white text-xl">حالة امتلاء الباص <span class="text-cyanGlow text-sm">(تطوير مستقبلي)</span>:</strong><br>
+                            ميزة تُظهر عدد المقاعد الفارغة قبل وصول الباص. إذا كان ممتلئاً، يقرر الطالب مسبقاً انتظار الباص التالي بدلاً من المفاجأة.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-4">
+                        <i class="fa-solid fa-route text-2xl text-purple-400 mt-1"></i>
+                        <div>
+                            <strong class="text-white text-xl">خريطة المسارات والمحطات:</strong><br>
+                            عرض جميع مسارات الباصات ومحطات التوقف بوضوح على الخريطة، ليعرف كل طالب من أين يركب وأين ينزل بسهولة.
+                        </div>
+                    </li>
+                </ul>
+                <div class="mt-8 text-center text-cyanGlow font-bold text-2xl">
+                    شكراً لاستماعكم.. هل من أسئلة؟
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Slide 6: Live App Demo -->
+    <div class="slide" id="slide-5">
+        <div class="content-container text-center" style="max-width: 1300px; padding: 0 40px;">
+            <div class="flex justify-center">
+                <div class="presenter-box">
+                    <i class="fa-solid fa-rocket"></i> العرض التطبيقي المباشر
+                </div>
+            </div>
+            <h1 class="text-5xl font-bold mb-6">جرّب التطبيق <span class="text-cyanGlow text-glow">الآن!</span></h1>
+            <p class="text-gray-400 text-lg mb-6">هذا هو النموذج الفعّال لتطبيق INU Smart Bus — يمكنك تجربته مباشرة</p>
+            
+            <!-- App iframe container -->
+            <div style="position: relative; width: 100%; max-width: 1000px; margin: 0 auto; border-radius: 20px; overflow: hidden; border: 1px solid rgba(0, 229, 255, 0.3); box-shadow: 0 0 50px rgba(0, 229, 255, 0.15), 0 20px 60px rgba(0, 0, 0, 0.4); background: #0a1628;">
+                <!-- Browser-like top bar -->
+                <div style="background: rgba(0, 229, 255, 0.08); padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(0, 229, 255, 0.15);">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background: #ff5f57;"></div>
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background: #febc2e;"></div>
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background: #28c840;"></div>
+                    </div>
+                    <span style="font-size: 0.8rem; color: rgba(0, 229, 255, 0.6); font-family: monospace; direction: ltr;">my-pp-bus-4wxk.vercel.app</span>
+                    <div style="width: 60px;"></div>
+                </div>
+                <iframe 
+                    src="https://my-pp-bus-4wxk.vercel.app/" 
+                    style="width: 100%; height: 55vh; border: none; display: block;"
+                    loading="lazy"
+                    title="INU Smart Bus App"
+                ></iframe>
+            </div>
+
+            <!-- Open in new tab button -->
+            <a href="https://my-pp-bus-4wxk.vercel.app/" target="_blank" rel="noopener noreferrer"
+                style="display: inline-flex; align-items: center; gap: 10px; margin-top: 20px; padding: 14px 36px; background: linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(15, 43, 91, 0.6)); border: 1px solid #00e5ff; border-radius: 12px; color: #00e5ff; font-weight: 700; font-size: 1.1rem; text-decoration: none; transition: all 0.3s; box-shadow: 0 0 20px rgba(0, 229, 255, 0.15);"
+                onmouseover="this.style.boxShadow='0 0 35px rgba(0,229,255,0.35)'; this.style.transform='translateY(-2px)'"
+                onmouseout="this.style.boxShadow='0 0 20px rgba(0,229,255,0.15)'; this.style.transform='translateY(0)'"
+            >
+                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                افتح التطبيق في نافذة جديدة
+            </a>
+        </div>
+    </div>
+
+    <!-- =============================================
+         SCRIPTS
+         ============================================= -->
+    <script>
+        // ===== SLIDER LOGIC (Unchanged) =====
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        function updateButtons() {
+            if (currentSlide === 0) {
+                prevBtn.classList.add('disabled');
+            } else {
+                prevBtn.classList.remove('disabled');
+            }
+
+            if (currentSlide === slides.length - 1) {
+                nextBtn.classList.add('disabled');
+            } else {
+                nextBtn.classList.remove('disabled');
+            }
+        }
+
+        function changeSlide(direction) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide += direction;
+            if (currentSlide < 0) currentSlide = 0;
+            if (currentSlide >= slides.length) currentSlide = slides.length - 1;
+            slides[currentSlide].classList.add('active');
+            updateButtons();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                if (currentSlide < slides.length - 1) changeSlide(1);
+            } else if (e.key === 'ArrowRight') {
+                if (currentSlide > 0) changeSlide(-1);
+            }
+        });
+
+        updateButtons();
+
+        // ===== EPIC INTRO ANIMATION (GSAP) =====
+        document.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('intro-overlay');
+            const bus = document.getElementById('intro-bus');
+            const trail = document.getElementById('glow-trail');
+            const trailCore = document.getElementById('glow-trail-core');
+            const roadGlow = document.getElementById('road-glow');
+            const starsContainer = document.getElementById('intro-stars');
+
+            // Generate road dashes
+            const road = document.querySelector('.intro-road');
+            for (let i = 0; i < 30; i++) {
+                const line = document.createElement('div');
+                line.className = 'road-line';
+                line.style.left = (i * 80 + 20) + 'px';
+                road.appendChild(line);
+            }
+
+            // Generate stars
+            for (let i = 0; i < 80; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 70 + '%';
+                star.style.width = (Math.random() * 2 + 1) + 'px';
+                star.style.height = star.style.width;
+                starsContainer.appendChild(star);
+            }
+
+            // Master timeline
+            const tl = gsap.timeline();
+
+            // Phase 0: Fade in stars
+            tl.to('.star', {
+                opacity: () => Math.random() * 0.6 + 0.2,
+                duration: 1,
+                stagger: { amount: 0.8, from: 'random' },
+                ease: 'power2.out'
+            });
+
+            // Ambient glows
+            tl.to('.ambient-glow', {
+                opacity: 1,
+                scale: 1.2,
+                duration: 1.5,
+                ease: 'power2.out'
+            }, '-=0.5');
+
+            // Phase 1: Road lines animate (scrolling feel)
+            tl.to('.road-line', {
+                x: -200,
+                duration: 3,
+                ease: 'none',
+                stagger: 0.02
+            }, '-=0.5');
+
+            // Phase 2: Bus drives in from right to center (direction flipped for RTL visual)
+            tl.fromTo(bus, 
+                { x: window.innerWidth + 400 },
+                { 
+                    x: window.innerWidth * 0.38,
+                    duration: 2.2,
+                    ease: 'power3.out'
+                }, 
+                '-=2.8'
+            );
+
+            // Speed lines animate during bus entry
+            tl.to('.speed-line', {
+                opacity: 0.7,
+                width: '+=30',
+                x: -40,
+                duration: 0.3,
+                stagger: 0.05,
+                repeat: 3,
+                yoyo: true,
+                ease: 'power1.inOut'
+            }, '-=2.2');
+
+            // Sparks
+            tl.to('.spark', {
+                opacity: 1,
+                x: () => -(Math.random() * 80 + 20),
+                y: () => (Math.random() - 0.5) * 30,
+                duration: 0.4,
+                stagger: 0.08,
+                repeat: 2,
+                yoyo: true,
+                ease: 'power2.out'
+            }, '-=2');
+
+            // Phase 3: Glow trail grows from the right (bus trail)
+            tl.to([trail, trailCore], {
+                width: '70%',
+                duration: 2,
+                ease: 'power2.out'
+            }, '-=1.5');
+
+            tl.to(roadGlow, {
+                width: '70%',
+                duration: 2,
+                ease: 'power2.out'
+            }, '-=2');
+
+            // Phase 4: Bus continues driving off screen to the left
+            tl.to(bus, {
+                x: -400,
+                duration: 1.8,
+                ease: 'power2.in'
+            }, '+=0.3');
+
+            // Trail expands full width as bus exits
+            tl.to([trail, trailCore], {
+                width: '100%',
+                opacity: 0.6,
+                duration: 1.5,
+                ease: 'power2.in'
+            }, '-=1.8');
+
+            // Phase 5: Trail flash and fade — names appear
+            tl.to([trail, trailCore, roadGlow], {
+                opacity: 0,
+                duration: 0.8,
+                ease: 'power2.out'
+            });
+
+            // Speed lines and sparks gone
+            tl.to(['.speed-line', '.spark'], {
+                opacity: 0,
+                duration: 0.3
+            }, '-=0.8');
+
+            // Flash effect
+            tl.fromTo(overlay, 
+                { backgroundColor: '#020810' },
+                { 
+                    backgroundColor: '#0a1525',
+                    duration: 0.15,
+                    yoyo: true,
+                    repeat: 1 
+                }
+            );
+
+            // Phase 6: Project title appears
+            tl.to('#intro-proj-title', {
+                opacity: 1,
+                y: 0,
+                duration: 0.6,
+                ease: 'power2.out'
+            }, '-=0.2');
+
+            // Main title appears
+            tl.fromTo('#intro-main-title', 
+                { opacity: 0, y: 20, scale: 0.9 },
+                { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: 'back.out(1.2)' }
+            );
+
+            // Phase 7: Names appear one by one
+            const names = ['#name-0', '#name-1', '#name-2', '#name-3'];
+            const dividers = document.querySelectorAll('.intro-divider');
+
+            names.forEach((name, i) => {
+                // Name text
+                tl.to(name, {
+                    opacity: 1,
+                    y: 0,
+                    scale: 1,
+                    duration: 0.5,
+                    ease: 'back.out(1.7)'
+                }, '-=0.1');
+
+                // Name glow background
+                tl.to(name + ' .name-glow', {
+                    opacity: 1,
+                    duration: 0.3,
+                    yoyo: true,
+                    repeat: 1
+                }, '-=0.4');
+
+                // Underline
+                tl.to(name + ' .name-line', {
+                    width: '80%',
+                    duration: 0.4,
+                    ease: 'power2.out'
+                }, '-=0.3');
+
+                // Divider (if not last)
+                if (i < dividers.length) {
+                    tl.to(dividers[i], {
+                        width: 120,
+                        opacity: 1,
+                        duration: 0.3,
+                        ease: 'power2.out'
+                    }, '-=0.2');
+                }
+            });
+
+            // University text
+            tl.to('#intro-uni', {
+                opacity: 1,
+                duration: 0.5,
+                ease: 'power2.out'
+            });
+
+            // Phase 8: Hold for 2 seconds
+            tl.to({}, { duration: 2 });
+
+            // Phase 9: Cinematic fade out
+            tl.to('.intro-name, .intro-divider, #intro-main-title, #intro-proj-title, #intro-uni', {
+                opacity: 0,
+                y: -20,
+                duration: 0.6,
+                stagger: 0.05,
+                ease: 'power2.in'
+            });
+
+            tl.to('.star, .ambient-glow', {
+                opacity: 0,
+                duration: 0.4
+            }, '-=0.3');
+
+            // Letterbox close
+            tl.to('.letterbox-top', { height: '50%', duration: 0.5, ease: 'power2.in' }, '-=0.2');
+            tl.to('.letterbox-bottom', { height: '50%', duration: 0.5, ease: 'power2.in' }, '-=0.5');
+
+            // Final overlay fade out
+            tl.to(overlay, {
+                opacity: 0,
+                duration: 0.6,
+                ease: 'power2.inOut',
+                onComplete: () => {
+                    overlay.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
